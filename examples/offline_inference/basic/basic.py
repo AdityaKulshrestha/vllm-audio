@@ -28,7 +28,7 @@ prompts = [
 # Reference - https://github.com/canopyai/Orpheus-TTS/blob/e64661fe6d02c414fc77c53578c9d64082614861/orpheus_tts_pypi/orpheus_tts/engine_class.py#L98C78-L98C171
 # Create a sampling params object.
 sampling_params = SamplingParams(
-        temperature=0.9, 
+        temperature=0.4, 
         top_p=0.9, 
         max_tokens=1200, 
         stop_token_ids = [128258], 

@@ -1,3 +1,30 @@
+
+### Getting started
+
+1. Activate the environment
+
+2. Go the examples/offline_inference/basic/audio_files
+
+3. Run the basic.py
+
+4. Additional changes and observations are recorded in OneNote in learning section.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <!-- markdownlint-disable MD001 MD041 -->
 <p align="center">
   <picture>
