@@ -1075,7 +1075,7 @@ class SpeechRequest(OpenAIBaseModel):
             temperature=0.4,
             top_p=0.9,
             max_tokens=4096,
-            reptition_penalty=1.1,
+            repetition_penalty=1.1,
             #TODO: Make it dyanamic
             stop_token_ids=[128528]
         )

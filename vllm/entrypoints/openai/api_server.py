@@ -596,14 +596,14 @@ async def create_speech(
         if request.stream:
             return await handler._stream_speech(
                 request,
-                prompt=handler._format_tts_prompt(request.text, request.voice),
+                prompt=handler._format_tts_prompt(request.input, request.voice),
                 sampling_params=sampling_params,
                 request_id=request_id
             )
         else:
             return await handler._generate_speech(
                 request,
-                prompt=handler._format_tts_prompt(request.text, request.voice),
+                prompt=handler._format_tts_prompt(request.input, request.voice),
                 sampling_params=sampling_params,
                 request_id=request_id
             )

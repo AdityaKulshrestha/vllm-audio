@@ -10,6 +10,7 @@ from vllm.entrypoints.openai.protocol import SpeechRequest  # TODO: Implement th
 from vllm.entrypoints.openai.serving_engine import OpenAIServing
 from vllm.logger import init_logger
 from vllm.outputs import SpeechRequestOutput, TTSOutput  # TODO: Implement this 
+from vllm.sampling_params import SamplingParams
 
 
 logger = init_logger(__name__)
@@ -26,14 +27,12 @@ class OpenAIServingSpeech(OpenAIServing):
     def __init__(
         self,
         engine_client: EngineClient,
-        model_config: ModelConfig,
-        models: list[str],
+        models: list[str] | None,
         *,
         request_logger: Optional[object] = None,
     ):
         super().__init__(
             engine_client=engine_client,
-            model_config=model_config,
             models=models,
             request_logger=request_logger,
         )
@@ -156,14 +155,15 @@ class OpenAIServingSpeech(OpenAIServing):
 
         """
         return f"<speak><voice name='{voice}'>{text}</voice></speak>"
+
+    # TODO: Add sampling params in the request
+    def _build_speech_sampling_params(self, request: SpeechRequest) -> dict:
+        """Build sampling params for TTS requests"""
+        params = request.to_sampling_params()
+
+        return params
     
     def _validate_model(self, request: SpeechRequest) -> Optional[str]:
         """Validate if the requested model supports TTS"""
         if request.model not in self.models:
             return f"Model '{request.model}' not found."
-
-        model_cfg = self.model_config.get_model_config(request.model)
-        if not model_cfg or not model_cfg.supports_tts:
-            return f"Model '{request.model}' does not support text-to-speech."
-
-        return None
