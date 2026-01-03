@@ -92,9 +92,9 @@ class OpenAIServingSpeech(OpenAIServing):
             prompt=prompt,
             sampling_params=sampling_params,
             request_id=request_id,
-            is_tts_request=True,
-            tts_response_format=request.response_format,
-            tts_voice=request.voice,
+            # is_tts_request=True,  TODO: Check for this flag
+            # tts_response_format=request.response_format,
+            # tts_voice=request.voice,
         )
 
         # Collect result
@@ -134,8 +134,8 @@ class OpenAIServingSpeech(OpenAIServing):
                 prompt=prompt,
                 sampling_params=sampling_params,
                 request_id=request_id,
-                is_tts_request=True,
-                tts_response_format=request.response_format
+                # is_tts_request=True,
+                # tts_response_format=request.response_format
             ):
                 if isinstance(output, SpeechRequestOutput):
                     for chunk in output.audio_chunks:
