@@ -4,9 +4,12 @@
 from collections.abc import MutableSequence
 from collections.abc import Sequence as GenericSequence
 from dataclasses import dataclass
-from typing import Any, Generic
+from typing import Any, Generic, Optional, Literal
 
+import io
+import wave
 import torch
+import numpy as np
 from typing_extensions import TypeVar
 
 from vllm.logger import init_logger
@@ -17,6 +20,10 @@ from vllm.sequence import RequestMetrics
 from vllm.v1.metrics.stats import RequestStateStats
 
 logger = init_logger(__name__)
+
+
+# TODO: Put it somewhere good
+AudioFormat = Literal["mp3", "wav", "pcm", "flac", "wav", "opus"]
 
 
 @dataclass
@@ -60,6 +67,79 @@ class CompletionOutput:
             f"finish_reason={self.finish_reason}, "
             f"stop_reason={self.stop_reason})"
         )
+
+
+@dataclass
+class TTSOutput:
+    """Audio output from TTS models"""
+    index: int
+    audio_data: np.ndarray
+    sample_rate: int = 24000
+    channels: int = 1
+    finish_reason: Optional[str] = None
+    input_text: str = ""
+    duration_seconds: Optional[float] = None 
+
+    def __post_init__(self):
+        if self.duration_seconds is None and self.audio_data is not None:
+            self.duration_seconds = self.audio_data.shape[0] / self.sample_rate
+    
+    def to_pcm_bytes(self) -> bytes:
+        """Raw PCM: 16-bit signed little endian mono"""
+        audio_flat = self.audio_data.flatten()
+        audio_int16 = (audio_flat * 32767).astype(np.int16)
+        return audio_int16.tobytes()
+    
+    def to_wav_bytes(self) -> bytes:
+        """Wav format with header"""
+        buffer = io.BytesIO()
+        with wave.open(buffer, 'wb') as wf:
+            wf.setnchannels(self.channels)
+            wf.setsampwidth(2)  # 16 bits = 2 bytes
+            wf.setframerate(self.sample_rate)
+            wf.writeframes(self.to_pcm_bytes())
+        return buffer.getvalue()
+    
+    def to_format(self, fmt: AudioFormat) -> bytes:
+        """Convert to requested audio format"""
+        if fmt == AudioFormat.pcm:
+            return self.to_pcm_bytes()
+        elif fmt == AudioFormat.wav:
+            return self.to_wav_bytes()
+        elif fmt == AudioFormat.mp3:
+            return self._to_mp3()
+        raise ValueError(f"Unsupported audio format: {fmt}")
+
+    def _to_mp3(self) -> bytes:
+        """Mp3 encoding (requires pydub and ffmpeg)"""
+        try:
+            from pydub import AudioSegment
+            segment = AudioSegment(
+                self.to_pcm_bytes(),
+                frame_rate=self.sample_rate,
+                sample_width=2,
+                channels=self.channels,
+            )
+            buffer = io.BytesIO()
+            segment.export(buffer, format="mp3")
+            return buffer.getvalue()
+        except ImportError:
+            raise ImportError(
+                "pydub is required for mp3 encoding. "
+                "Please install it via `pip install pydub`."
+            )
+    
+    @staticmethod
+    def get_content_type(fmt: AudioFormat) -> str:
+        """HTTP Content-Type headef for format"""
+        return {
+            "mp3": "audio/mpeg",
+            "wav": "audio/wav",
+            "pcm": "audio/pcm",
+            "opus": "audio/opus",
+            "flac": "audio/flac",
+        }.get(fmt, "application/octet-stream")
+
 
 
 @dataclass
@@ -188,6 +268,32 @@ class RequestOutput:
             f"num_cached_tokens={self.num_cached_tokens}, "
             f"multi_modal_placeholders={self.multi_modal_placeholders})"
         )
+    
+
+@dataclass
+class SpeechRequestOutput:
+    """
+    Output for /v1/audio/speech requests
+    Unlike text completions, it returns audio bytes directly
+    """
+
+    request_id: str
+    outputs: TTSOutput
+    prompt: Optional[str] = None
+    finished: bool = True
+
+    model: str = ""
+    voice: str = ""
+    response_format: AudioFormat = "wav"
+
+    def to_response_bytes(self) -> bytes:
+        """Get audio bytes in requested format"""
+        return self.outputs.to_format(self.response_format)
+
+    @property
+    def content_type(self) -> str:
+        """HTTP Content-Type for response"""
+        return TTSOutput.get_content_type(self.response_format)
 
 
 _O = TypeVar("_O", default=PoolingOutput)

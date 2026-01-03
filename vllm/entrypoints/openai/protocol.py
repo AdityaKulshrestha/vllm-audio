@@ -1054,6 +1054,32 @@ class ChatCompletionRequest(OpenAIBaseModel):
         return data
 
 
+class SpeechRequest(OpenAIBaseModel):
+    """
+    OpenAI compatible request
+
+    Reference: https://platform.openai.com/docs/api-reference/audio/create
+    """
+    model: str
+    input: str = Field(..., max_length=4096, description="Text to synthesize")
+    voice: str | None = Field(default="default", description="voice to use")
+
+    # Optional field
+    response_format: Literal["mp3", "wav", "flac"] | None = "wav"
+    speed: float = Field(default=1.0, ge=0.25, le=4.0)
+
+    stream: bool = False 
+
+    def to_sampling_params(self) -> SamplingParams:
+        return SamplingParams(
+            temperature=0.4,
+            top_p=0.9,
+            max_tokens=4096,
+            reptition_penalty=1.1,
+            #TODO: Make it dyanamic
+            stop_token_ids=[128528]
+        )
+
 class CompletionRequest(OpenAIBaseModel):
     # Ordered by official OpenAI API documentation
     # https://platform.openai.com/docs/api-reference/completions/create

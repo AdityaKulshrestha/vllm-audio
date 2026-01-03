@@ -229,21 +229,22 @@ class InputPreprocessor:
         if encoder_config and encoder_config.get("do_lower_case", False):
             prompt = prompt.lower()
 
-        voice=None
-
-        if voice:
-            adapted_prompt = f"{voice}: {prompt}"
-            prompt_tokens = self.tokenizer(adapted_prompt, return_tensors="pt")
-            start_token = torch.tensor([[ 128259]], dtype=torch.int64)
-            end_tokens = torch.tensor([[128009, 128260, 128261, 128257]], dtype=torch.int64)
-            all_input_ids = torch.cat([start_token, prompt_tokens.input_ids, end_tokens], dim=1)
-            propmt = self.tokenizer.decode(all_input_ids[0])
-        else:
-            prompt_tokens = self.tokenizer(prompt, return_tensors="pt")
-            start_token = torch.tensor([[ 128259]], dtype=torch.int64)
-            end_tokens = torch.tensor([[128009, 128260, 128261, 128257]], dtype=torch.int64)
-            all_input_ids = torch.cat([start_token, prompt_tokens.input_ids, end_tokens], dim=1)
-            prompt = self.tokenizer.decode(all_input_ids[0])
+        # TODO: Make it configurable
+        if self.model_config.audio_encodec:
+            voice = tokenization_kwargs.pop("voice", None)  # Remove the tokenization kwarg
+            if voice:
+                adapted_prompt = f"{voice}: {prompt}"
+                prompt_tokens = self.tokenizer(adapted_prompt, return_tensors="pt")
+                start_token = torch.tensor([[128259]], dtype=torch.int64)
+                end_tokens = torch.tensor([[128009, 128260, 128261, 128257]], dtype=torch.int64)
+                all_input_ids = torch.cat([start_token, prompt_tokens.input_ids, end_tokens], dim=1)
+                propmt = self.tokenizer.decode(all_input_ids[0])
+            else:
+                prompt_tokens = self.tokenizer(prompt, return_tensors="pt")
+                start_token = torch.tensor([[ 128259]], dtype=torch.int64)
+                end_tokens = torch.tensor([[128009, 128260, 128261, 128257]], dtype=torch.int64)
+                all_input_ids = torch.cat([start_token, prompt_tokens.input_ids, end_tokens], dim=1)
+                prompt = self.tokenizer.decode(all_input_ids[0])
 
         return tokenizer.encode(prompt, **tokenization_kwargs)
 

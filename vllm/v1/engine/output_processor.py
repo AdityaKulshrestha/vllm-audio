@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 import torch
+import numpy as np
 
 from vllm.lora.request import LoRARequest
 from vllm.outputs import (
@@ -21,6 +22,7 @@ from vllm.tokenizers import TokenizerLike
 from vllm.tracing import SpanAttributes, SpanKind, Tracer, extract_trace_context
 from vllm.utils import length_from_prompt_token_ids_or_embeds
 from vllm.v1.engine import EngineCoreOutput, EngineCoreRequest, FinishReason
+from vllm.v1.engine.audio_processor import AudioTokenProcessor, AudioCodecConfig
 from vllm.v1.engine.detokenizer import IncrementalDetokenizer
 from vllm.v1.engine.logprobs import LogprobsProcessor
 from vllm.v1.engine.parallel_sampling import ParentRequest
@@ -30,6 +32,8 @@ from vllm.v1.metrics.stats import (
     RequestStateStats,
     SchedulerStats,
 )
+from vllm.outputs import TTSOutput, SpeechRequestOutput
+from snac import SNAC
 
 
 class RequestOutputCollector:
@@ -86,7 +90,7 @@ class RequestOutputCollector:
 
 @dataclass
 class OutputProcessorOutput:
-    request_outputs: list[RequestOutput | PoolingRequestOutput]
+    request_outputs: list[RequestOutput | SpeechRequestOutput | PoolingRequestOutput]
     reqs_to_abort: list[str]
 
 
@@ -112,6 +116,9 @@ class RequestState:
         top_p: float | None = None,
         n: int | None = None,
         temperature: float | None = None,
+        is_tts_request: bool = False,
+        tts_response_format: str = "wav",
+        tts_voice: str = "default"
     ):
         self.request_id = request_id
         self.external_req_id = external_req_id
@@ -135,6 +142,11 @@ class RequestState:
         self.is_prefilling = True
         self.queue = queue
         self.num_cached_tokens = 0
+
+        # TODO: Use Request state to mark tts request separately
+        self.is_tts_request = is_tts_request
+        self.tts_response_format = tts_response_format
+        self.tts_voice = tts_voice
 
         self.stats = RequestStateStats(arrival_time=arrival_time) if log_stats else None
 
@@ -263,6 +275,33 @@ class RequestState:
         return self._new_request_output(
             external_req_id, outputs, finished, kv_transfer_params
         )
+    
+    def make_tts_output(
+        self,
+        audio_data: np.ndarray,
+        finish_reason: FinishReason | None,
+    ) -> SpeechRequestOutput:
+        """Creates TTS-Specific Output"""
+        if finish_reason is None:
+            # TTS typically doens't stream partial result
+            return None
+        
+        tts_output = TTSOutput(
+            index=self.request_index,
+            audio_data=audio_data,
+            sample_rate=24000,
+            input_text=self.prompt or "",
+            finish_reason=str(finish_reason)
+        )
+
+        return SpeechRequestOutput(
+            request_id=self.external_req_id,
+            outputs=tts_output,
+            prompt=self.prompt,
+            finished=True,
+            response_format=self.tts_response_format,
+            voice=self.tts_voice
+        )
 
     def _new_request_output(
         self,
@@ -351,9 +390,15 @@ class OutputProcessor:
         tokenizer: TokenizerLike | None,
         log_stats: bool,
         stream_interval: int = 1,
+        audio_codec_config: AudioCodecConfig | None = None,
     ):
         self.log_stats = log_stats
         self.tokenizer = tokenizer
+        self.audio_processor = AudioTokenProcessor | None
+
+        if audio_codec_config is not None:
+            self.audio_processor = AudioTokenProcessor(audio_codec_config)
+        
         self.stream_interval = stream_interval
         self.request_states: dict[str, RequestState] = {}
         self.parent_requests: dict[str, ParentRequest] = {}
@@ -505,7 +550,7 @@ class OutputProcessor:
         within the loop below.
         """
 
-        request_outputs: list[RequestOutput | PoolingRequestOutput] = []
+        request_outputs: list[RequestOutput | PoolingRequestOutput | SpeechRequestOutput] = []
         reqs_to_abort: list[str] = []
         for engine_core_output in engine_core_outputs:
             req_id = engine_core_output.request_id
@@ -543,6 +588,7 @@ class OutputProcessor:
                 req_state.logprobs_processor.update_from_output(engine_core_output)
 
             # 4) Create and handle RequestOutput objects.
+            # TODO: Refactor to reduce code duplication with above.
             if request_output := req_state.make_request_output(
                 new_token_ids,
                 pooling_output,
@@ -550,6 +596,11 @@ class OutputProcessor:
                 stop_reason,
                 kv_transfer_params,
             ):
+                request_output = req_state.make_tts_output(
+                    audio_data=self.decode_audio_tokens(request_output.outputs[0].token_ids),
+                    finish_reason=finish_reason
+                )
+                # audio = self.decode_audio_tokens(request_output.outputs[0].token_ids)
                 if req_state.queue is not None:
                     # AsyncLLM: put into queue for handling by generate().
                     req_state.queue.put(request_output)
@@ -702,3 +753,10 @@ class OutputProcessor:
         ParentRequest.observe_finished_request(
             req_state.parent_req, iteration_stats, req_state.stats.num_generation_tokens
         )
+
+    def decode_audio_tokens(self, token_ids: list[int]) -> torch.Tensor:
+        
+        if self.audio_processor is None:
+            raise ValueError("Audio processor not initialized.")
+        
+        return self.audio_processor.decode_to_audio(token_ids)

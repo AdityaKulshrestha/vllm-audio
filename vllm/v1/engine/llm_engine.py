@@ -99,6 +99,7 @@ class LLMEngine:
         self.output_processor = OutputProcessor(
             self.tokenizer,
             log_stats=self.log_stats,
+            audio_codec_config=self.vllm_config.audio_codec_config,
             stream_interval=self.vllm_config.scheduler_config.stream_interval,
         )
         endpoint = self.observability_config.otlp_traces_endpoint

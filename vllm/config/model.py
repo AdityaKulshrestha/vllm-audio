@@ -121,6 +121,7 @@ class ModelConfig:
     - "mistral" will always use the tokenizer from `mistral_common`.\n
     - "deepseek_v32" will always use the tokenizer from `deepseek_v32`.\n
     - Other custom values can be supported via plugins."""
+    audio_encodec: str = Field(default=None)
     trust_remote_code: bool = False
     """Trust remote code (e.g., from HuggingFace) when downloading the model
     and tokenizer."""

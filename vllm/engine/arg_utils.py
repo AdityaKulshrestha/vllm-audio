@@ -34,6 +34,7 @@ from typing_extensions import TypeIs
 import vllm.envs as envs
 from vllm.attention.backends.registry import AttentionBackendEnum
 from vllm.config import (
+    AudioCodecConfig,
     AttentionConfig,
     CacheConfig,
     CompilationConfig,
@@ -357,6 +358,7 @@ class EngineArgs:
     served_model_name: str | list[str] | None = ModelConfig.served_model_name
     tokenizer: str | None = ModelConfig.tokenizer
     hf_config_path: str | None = ModelConfig.hf_config_path
+    audio_encodec: str | None = ModelConfig.audio_encodec
     runner: RunnerOption = ModelConfig.runner
     convert: ConvertOption = ModelConfig.convert
     skip_tokenizer_init: bool = ModelConfig.skip_tokenizer_init
@@ -628,6 +630,7 @@ class EngineArgs:
         model_group.add_argument("--convert", **model_kwargs["convert"])
         model_group.add_argument("--tokenizer", **model_kwargs["tokenizer"])
         model_group.add_argument("--tokenizer-mode", **model_kwargs["tokenizer_mode"])
+        model_group.add_argument("--audio-encodec", **model_kwargs["audio_encodec"])
         model_group.add_argument(
             "--trust-remote-code", **model_kwargs["trust_remote_code"]
         )
@@ -1205,6 +1208,7 @@ class EngineArgs:
         return ModelConfig(
             model=self.model,
             hf_config_path=self.hf_config_path,
+            audio_encodec=self.audio_encodec,
             runner=self.runner,
             convert=self.convert,
             tokenizer=self.tokenizer,
@@ -1346,6 +1350,8 @@ class EngineArgs:
             )
 
         model_config = self.create_model_config()
+
+        audio_codec_config = AudioCodecConfig.from_model_config(model_config)
         self.model = model_config.model
         self.tokenizer = model_config.tokenizer
 
@@ -1737,6 +1743,7 @@ class EngineArgs:
             )
         config = VllmConfig(
             model_config=model_config,
+            audio_codec_config=audio_codec_config,
             cache_config=cache_config,
             parallel_config=parallel_config,
             scheduler_config=scheduler_config,

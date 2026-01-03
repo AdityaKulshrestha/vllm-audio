@@ -21,6 +21,7 @@ from pydantic import ConfigDict, Field, model_validator
 from pydantic.dataclasses import dataclass
 
 import vllm.envs as envs
+from vllm.config.audio import AudioCodecConfig
 from vllm.config.speculative import EagleModelTypes
 from vllm.logger import enable_trace_function_call, init_logger
 from vllm.transformers_utils.runai_utils import is_runai_obj_uri
@@ -182,6 +183,7 @@ class VllmConfig:
     # try to download a model
     model_config: ModelConfig = Field(default=None)
     """Model configuration."""
+    audio_codec_config: AudioCodecConfig = Field(default=None)
     cache_config: CacheConfig = Field(default_factory=CacheConfig)
     """Cache configuration."""
     parallel_config: ParallelConfig = Field(default_factory=ParallelConfig)

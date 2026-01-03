@@ -191,6 +191,7 @@ class LLM:
         self,
         model: str,
         *,
+        audio_encodec: str = None,
         runner: RunnerOption = "auto",
         convert: ConvertOption = "auto",
         tokenizer: str | None = None,
@@ -299,6 +300,7 @@ class LLM:
         engine_args = EngineArgs(
             model=model,
             runner=runner,
+            audio_encodec=audio_encodec,
             convert=convert,
             tokenizer=tokenizer,
             tokenizer_mode=tokenizer_mode,

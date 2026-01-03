@@ -288,6 +288,32 @@ def make_arg_parser(parser: FlexibleArgumentParser) -> FlexibleArgumentParser:
         "Must be a YAML with the following options: "
         "https://docs.vllm.ai/en/latest/configuration/serve_args.html",
     )
+    parser.add_argument(
+        "--enable-tts",
+        action="store_true",
+        help="Enable Text-to-Speech (TTS) endpoint /v1/audio/speech.",  
+    )
+    parser.add_argument(
+        "--tts-models",
+        type=str,
+        default="",
+        help="Comma-separated list of TTS model names to enable for "
+        "the /v1/audio/speech endpoint.",
+    )
+    parser.add_argument(
+        "--audio-codec",
+        type=str,
+        default="snac",
+        help="The audio codec to use for TTS generation. Currently only "
+        "'snac' is supported.",
+    )
+    parser.add_argument(
+        "--audio-codec-model",
+        type=str,
+        default="hubertsiuzdak/snac_24khz",
+        help="The audio codec model to use for TTS generation.",
+    )
+    
     parser = FrontendArgs.add_cli_args(parser)
     parser = AsyncEngineArgs.add_cli_args(parser)
 

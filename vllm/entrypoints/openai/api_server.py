@@ -54,6 +54,7 @@ from vllm.entrypoints.openai.protocol import (
     ResponsesRequest,
     ResponsesResponse,
     StreamingResponsesResponse,
+    SpeechRequest,
     TranscriptionRequest,
     TranscriptionResponseVariant,
     TranslationRequest,
@@ -61,6 +62,7 @@ from vllm.entrypoints.openai.protocol import (
 )
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
+from vllm.entrypoints.openai.serving_speech import OpenAIServingSpeech
 from vllm.entrypoints.openai.serving_engine import OpenAIServing
 from vllm.entrypoints.openai.serving_models import (
     BaseModelPath,
@@ -258,6 +260,10 @@ def completion(request: Request) -> OpenAIServingCompletion | None:
     return request.app.state.openai_serving_completion
 
 
+def speech(request: Request) -> OpenAIServingSpeech | None:
+    return request.app.state.openai_serving_speech
+
+
 def tokenization(request: Request) -> OpenAIServingTokenization:
     return request.app.state.openai_serving_tokenization
 
@@ -286,6 +292,7 @@ async def get_server_load_metrics(request: Request):
     # - /v1/completions
     # - /v1/audio/transcriptions
     # - /v1/audio/translations
+    # - /v1/audio/speech
     # - /v1/embeddings
     # - /pooling
     # - /classify
@@ -558,6 +565,52 @@ async def create_completion(request: CompletionRequest, raw_request: Request):
         )
 
     return StreamingResponse(content=generator, media_type="text/event-stream")
+
+
+@router.post(
+    "/v1/audio/speech",
+    responses={
+        HTTPStatus.OK.value: {"content": {"application/octet-stream": {}}},
+        HTTPStatus.BAD_REQUEST.value: {"model": ErrorResponse},
+        HTTPStatus.UNPROCESSABLE_ENTITY.value: {"model": ErrorResponse},
+        HTTPStatus.INTERNAL_SERVER_ERROR.value: {"model": ErrorResponse}
+    }
+)
+@with_cancellation
+@load_aware_call
+async def create_speech(
+    request: SpeechRequest,
+    raw_request: Request
+):
+    handler = speech(raw_request)
+    if handler is None:
+        return base(raw_request).create_error_response(
+            message="The model does not support Speech API"
+        )
+
+    sampling_params = handler._build_speech_sampling_params(request)
+
+    request_id = str(uuid.uuid4())
+
+    try:
+        if request.stream:
+            return await handler._stream_speech(
+                request,
+                prompt=handler._format_tts_prompt(request.text, request.voice),
+                sampling_params=sampling_params,
+                request_id=request_id
+            )
+        else:
+            return await handler._generate_speech(
+                request,
+                prompt=handler._format_tts_prompt(request.text, request.voice),
+                sampling_params=sampling_params,
+                request_id=request_id
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR.value, detail=str(e)
+        ) from e
 
 
 @router.post(
@@ -1141,6 +1194,14 @@ async def init_app_state(
         if "embed" in supported_tasks
         else None
     )
+    state.openai_serving_speech = (
+        OpenAIServingSpeech(
+            engine_client,
+            state.openai_serving_models,
+            request_logger=request_logger,
+        )
+    )
+
     state.openai_serving_classification = (
         ServingClassification(
             engine_client,
