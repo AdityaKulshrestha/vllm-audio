@@ -588,25 +588,9 @@ async def create_speech(
             message="The model does not support Speech API"
         )
 
-    sampling_params = handler._build_speech_sampling_params(request)
-
-    request_id = str(uuid.uuid4())
-
     try:
-        if request.stream:
-            return await handler._stream_speech(
-                request,
-                prompt=handler._format_tts_prompt(request.input, request.voice),
-                sampling_params=sampling_params,
-                request_id=request_id
-            )
-        else:
-            return await handler._generate_speech(
-                request,
-                prompt=handler._format_tts_prompt(request.input, request.voice),
-                sampling_params=sampling_params,
-                request_id=request_id
-            )
+        return await handler.create_speech(request, raw_request)
+
     except Exception as e:
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR.value, detail=str(e)

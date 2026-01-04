@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 
+from enum import StrEnum
 from collections.abc import MutableSequence
 from collections.abc import Sequence as GenericSequence
 from dataclasses import dataclass
@@ -23,7 +24,13 @@ logger = init_logger(__name__)
 
 
 # TODO: Put it somewhere good
-AudioFormat = Literal["mp3", "wav", "pcm", "flac", "wav", "opus"]
+# AudioFormat = Literal["mp3", "wav", "pcm", "flac", "wav", "opus"]
+class AudioFormat(StrEnum):
+    mp3 = "mp3"
+    wav = "wav"
+    pcm = "pcm"
+    flac = "flac"
+    opus = "opus"
 
 
 @dataclass

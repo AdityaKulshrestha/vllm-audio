@@ -21,7 +21,7 @@ from vllm.inputs import PromptType
 from vllm.logger import init_logger
 from vllm.lora.request import LoRARequest
 from vllm.multimodal import MULTIMODAL_REGISTRY, MultiModalRegistry
-from vllm.outputs import PoolingRequestOutput, RequestOutput
+from vllm.outputs import PoolingRequestOutput, RequestOutput, SpeechRequestOutput
 from vllm.plugins.io_processors import get_io_processor
 from vllm.pooling_params import PoolingParams
 from vllm.sampling_params import SamplingParams
@@ -442,7 +442,8 @@ class AsyncLLM(EngineClient):
                 # Note: both OutputProcessor and EngineCore handle their
                 # own request cleanup based on finished.
                 finished = out.finished
-                assert isinstance(out, RequestOutput)
+                assert isinstance(out, (RequestOutput, SpeechRequestOutput)) 
+                # logger.info("Yielding output: %s", out)
                 yield out
 
         # If the request is disconnected by the client, generate()
@@ -494,6 +495,7 @@ class AsyncLLM(EngineClient):
                 while True:
                     # 1) Pull EngineCoreOutputs from the EngineCore.
                     outputs = await engine_core.get_output_async()
+                    # logger.info(f"Output Receveived: {outputs}")
                     num_outputs = len(outputs.outputs)
 
                     iteration_stats = (

@@ -1,5 +1,6 @@
 """OpenAI-compatible /v1/audio/speech endpoint."""
 
+import uuid
 from fastapi import Request, Response
 from fastapi.responses import StreamingResponse
 from typing import AsyncGenerator, Optional
@@ -49,14 +50,15 @@ class OpenAIServingSpeech(OpenAIServing):
         """
 
         # Validate model
-        error = self._validate_model(request)
+        # error = self._validate_model(request)
 
-        if error:
-            return self.create_error_response(error)
+        # if error:
+            # return self.create_error_response(error)
         
         # Draft prompt for the TTS model
         # Format depends on the model
-        prompt = self._format_tts_prompt(request.input, request.voice)
+        # prompt = self._format_tts_prompt(request.input, request.voice)
+        prompt = request.input  # For now, use raw input as prompt
 
         # Get sampling params
         sampling_params = request.to_sampling_params()
@@ -64,13 +66,13 @@ class OpenAIServingSpeech(OpenAIServing):
         # Generate
         request_id = f"req-{self._generate_request_id()}"
 
-
         try:
             if request.stream:
                 return await self._stream_speech(
                     request, prompt, sampling_params, request_id
                 )
             else:
+                logger.info("Generating non-streaming speech")
                 return await self._generate_speech(
                     request, prompt, sampling_params, request_id
                 )
@@ -162,8 +164,14 @@ class OpenAIServingSpeech(OpenAIServing):
         params = request.to_sampling_params()
 
         return params
+
+    def _generate_request_id(self) -> str:
+        """Generate a unique request ID"""
+
+        return str(uuid.uuid4())
     
-    def _validate_model(self, request: SpeechRequest) -> Optional[str]:
-        """Validate if the requested model supports TTS"""
-        if request.model not in self.models:
-            return f"Model '{request.model}' not found."
+    # def _validate_model(self, request: SpeechRequest) -> Optional[str]:
+    #     """Validate if the requested model supports TTS"""
+    #     logger.info(f"This is the models list: {self.models}")
+    #     if request.model not in self.models:
+    #         return f"Model '{request.model}' not found."

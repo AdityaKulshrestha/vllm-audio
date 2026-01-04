@@ -48,7 +48,7 @@ class RequestOutputCollector:
     def __init__(self, output_kind: RequestOutputKind, request_id: str):
         self.aggregate = output_kind == RequestOutputKind.DELTA
         self.request_id = request_id
-        self.output: RequestOutput | PoolingRequestOutput | Exception | None = None
+        self.output: RequestOutput | PoolingRequestOutput | SpeechRequestOutput | Exception | None = None
         self.ready = asyncio.Event()
 
     def put(self, output: RequestOutput | PoolingRequestOutput | Exception) -> None:
@@ -596,10 +596,11 @@ class OutputProcessor:
                 stop_reason,
                 kv_transfer_params,
             ):
-                request_output = req_state.make_tts_output(
-                    audio_data=self.decode_audio_tokens(request_output.outputs[0].token_ids),
-                    finish_reason=finish_reason
-                )
+                if request_output.finished:
+                    request_output = req_state.make_tts_output(
+                        audio_data=self.decode_audio_tokens(request_output.outputs[0].token_ids),
+                        finish_reason=finish_reason
+                    )
                 # audio = self.decode_audio_tokens(request_output.outputs[0].token_ids)
                 if req_state.queue is not None:
                     # AsyncLLM: put into queue for handling by generate().
