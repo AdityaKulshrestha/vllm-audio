@@ -1072,10 +1072,10 @@ class SpeechRequest(OpenAIBaseModel):
 
     def to_sampling_params(self) -> SamplingParams:
         return SamplingParams(
-            temperature=0.4,
-            top_p=0.9,
-            max_tokens=4096,
-            repetition_penalty=1.1,
+            temperature=0.7,
+            top_p=0.95,
+            max_tokens=800,
+            repetition_penalty=1.2,
             #TODO: Make it dyanamic
             stop_token_ids=[128528]
         )

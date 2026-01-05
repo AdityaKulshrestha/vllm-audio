@@ -54,7 +54,8 @@ class AudioTokenProcessor:
         cfg = self.config
 
         # Filter out end tokens
-        filtered = [t for t in token_ids if t != cfg.end_token]
+        end_index = token_ids.index(cfg.end_token) if cfg.end_token in token_ids else len(token_ids)
+        filtered = token_ids[:end_index]
 
         # Trim to multiple of num_codebooks (7 for SNAC)
         trim_len = (len(filtered) // cfg.num_codebooks) * cfg.num_codebooks
@@ -112,6 +113,7 @@ class AudioTokenProcessor:
         """
         # Extract audio tokens
         audio_tokens = self.extract_audio_tokens(audio_tokens)
+        print("These are the tokens: ", audio_tokens)
         if len(audio_tokens) < self.config.num_codebooks:
             # Not enough tokens for even one frame
             return np.array([], dtype=np.float32)

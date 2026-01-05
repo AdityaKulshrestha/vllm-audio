@@ -1,40 +1,13 @@
-
-### Getting started
-
-1. Activate the environment
-
-2. Go the examples/offline_inference/basic/audio_files
-
-3. Run the basic.py
-
-4. Additional changes and observations are recorded in OneNote in learning section.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <!-- markdownlint-disable MD001 MD041 -->
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/vllm-project/vllm/main/docs/assets/logos/vllm-logo-text-dark.png">
-    <img alt="vLLM" src="https://raw.githubusercontent.com/vllm-project/vllm/main/docs/assets/logos/vllm-logo-text-light.png" width=55%>
+    <img alt="vLLM-Audio" src="https://raw.githubusercontent.com/vllm-project/vllm/main/docs/assets/logos/vllm-logo-text-light.png" width=55%>
   </picture>
 </p>
 
 <h3 align="center">
-Easy, fast, and cheap LLM serving for everyone
+Easy, fast, and cheap LLM based TTS model serving for everyone
 </h3>
 
 <p align="center">
@@ -48,7 +21,7 @@ For events, please visit [vllm.ai/events](https://vllm.ai/events) to join us.
 
 ## About
 
-vLLM is a fast and easy-to-use library for LLM inference and serving.
+vLLM is a fast and easy-to-use library for TTS inference and serving.
 
 Originally developed in the [Sky Computing Lab](https://sky.cs.berkeley.edu) at UC Berkeley, vLLM has evolved into a community-driven project with contributions from both academia and industry.
 
@@ -81,7 +54,13 @@ vLLM seamlessly supports most popular open-source models on HuggingFace, includi
 - Embedding Models (e.g., E5-Mistral)
 - Multi-modal LLMs (e.g., LLaVA)
 
-Find the full list of supported models [here](https://docs.vllm.ai/en/latest/models/supported_models.html).
+## Supported TTS Models
+
+| Model | Description | Voices Supported |
+|-------|-------------|------------------|
+|-------|-------------|------------------|
+| [Svara TTS](https://huggingface.co/mistralai/Mistral-7B-TTS) | TTS models supporting 19 languages built by Kenpath. | 19 Languages with Male and Female: Hindi (Male), Hindi (Female), Marathi (Male), Marathi (Female), Bengali (Male), Bengali (Female), Tamil (Male), Tamil (Female), Telugu (Male), Telugu (Female), Kannada (Male), Kannada (Female), Gujarati (Male), Gujarati (Female), Punjabi (Male), Punjabi (Female), English (Male), English (Female),  Odia (Male),  Odia (Female) |    
+| [Orpheus TTS](https://huggingface.co/jaywalnut310/vits-finetuned-ljspeech) | Autogressive TTS model trained using Llama 3B and SNAC audio codec.| (Hindi, English)
 
 ## Getting Started
 
@@ -113,6 +92,20 @@ If you use vLLM for your research, please cite our [paper](https://arxiv.org/abs
   booktitle={Proceedings of the ACM SIGOPS 29th Symposium on Operating Systems Principles},
   year={2023}
 }
+```
+
+## Client
+
+- curl
+```
+curl -X POST "http://localhost:8000/v1/audio/speech"   -H "Content-Type: application/json"   -o output.wav   -d '{
+    "model": "kenpath/svara-tts-v1",
+    "input": "आज का मौसम बह<0941>त अच<094d>छा ह<0948>। आप क<0948>स<0947> ह<0948><0902>? <happy>",
+    "voice": "Hindi (Male)",
+    "response_format": "wav",
+    "speed": 1,
+    "stream": false
+  }'
 ```
 
 ## Contact Us

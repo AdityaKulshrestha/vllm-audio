@@ -57,8 +57,11 @@ class OpenAIServingSpeech(OpenAIServing):
         
         # Draft prompt for the TTS model
         # Format depends on the model
-        # prompt = self._format_tts_prompt(request.input, request.voice)
-        prompt = request.input  # For now, use raw input as prompt
+        
+        if request.voice:
+            prompt = self._format_tts_prompt(request)
+        else:
+            prompt = request.input
 
         # Get sampling params
         sampling_params = request.to_sampling_params()
@@ -72,7 +75,6 @@ class OpenAIServingSpeech(OpenAIServing):
                     request, prompt, sampling_params, request_id
                 )
             else:
-                logger.info("Generating non-streaming speech")
                 return await self._generate_speech(
                     request, prompt, sampling_params, request_id
                 )
@@ -151,12 +153,17 @@ class OpenAIServingSpeech(OpenAIServing):
             headers={"X-Request-ID": request_id},
         )
         
-    def _format_tts_prompt(self, text: str, voice: str) -> str:
+    def _format_tts_prompt(self, request) -> str:
         """
         Format input text into model-specific prompt.
 
         """
-        return f"<speak><voice name='{voice}'>{text}</voice></speak>"
+        voice = request.voice
+        text = request.input
+
+        if voice is None or voice == "":
+            voice = "default"
+        return f"<custom_token_3><|audio|><|begin_of_text|>{voice}: {text}<|eot_id|><custom_token_4><custom_token_5><custom_token_1>"
 
     # TODO: Add sampling params in the request
     def _build_speech_sampling_params(self, request: SpeechRequest) -> dict:

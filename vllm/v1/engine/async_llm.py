@@ -443,7 +443,6 @@ class AsyncLLM(EngineClient):
                 # own request cleanup based on finished.
                 finished = out.finished
                 assert isinstance(out, (RequestOutput, SpeechRequestOutput)) 
-                # logger.info("Yielding output: %s", out)
                 yield out
 
         # If the request is disconnected by the client, generate()
@@ -495,7 +494,6 @@ class AsyncLLM(EngineClient):
                 while True:
                     # 1) Pull EngineCoreOutputs from the EngineCore.
                     outputs = await engine_core.get_output_async()
-                    # logger.info(f"Output Receveived: {outputs}")
                     num_outputs = len(outputs.outputs)
 
                     iteration_stats = (
