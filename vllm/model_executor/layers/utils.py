@@ -315,7 +315,23 @@ def cpu_unquantized_gemm(
     weight: torch.Tensor,
     bias: torch.Tensor | None = None,
 ):
-    return layer.cpu_linear(x, weight, bias)
+    # Handle 3D tensors for SGLang tile compatibility
+    # 3D input: [batch, seq_len, hidden_dim] -> flatten to [batch*seq_len, hidden_dim]
+    original_shape = x.shape
+
+    if x.ndim == 3:
+        # Flatten: [batch, seq_len, hidden_dim] -> [batch*seq_len, hidden_dim]
+        x = x.view(-1, x.size(-1))
+
+    # Apply the linear operation (2D tensor expected)
+    output = layer.cpu_linear(x, weight, bias)
+
+    # Restore original shape structure for 3D inputs
+    if len(original_shape) == 3:
+        # [batch*seq_len, output_dim] -> [batch, seq_len, output_dim]
+        output = output.view(*original_shape[:-1], output.size(-1))
+
+    return output
 
 
 def dispatch_unquantized_gemm() -> Callable[..., torch.Tensor]:
